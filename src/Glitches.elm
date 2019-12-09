@@ -1,20 +1,10 @@
-module Glitches exposing (Image, Pixel, asdfPixelSort, brightness)
+module Glitches exposing (asdfPixelSort, brightness)
 
 import Debug
 import List
 import List.Extra
 import Maybe
-
-type alias Image =
-    { width  : Int
-    , height : Int
-    , data   : List (List Pixel) }
-
-type alias Pixel =
-    { red   : Int
-    , green : Int
-    , blue  : Int
-    , alpha : Int }
+import Image exposing (Image, Pixel)
 
 {- PART 1 -}
 

@@ -1,0 +1,80 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Main</title>
+</head>
+
+<body>
+    <script type="text/javascript" src="main.js"></script>
+    <canvas id="canvas" width="400" height="300"></canvas>
+    <img id='moon'src="./sign.jpg" />
+    <input id='picker' type='file' accept='image/*'/>
+    <div id="elm"></div>
+    <script>
+        window.onload = function () {
+            const pixels = getImageData()
+
+            console.log("[js] " + pixels.data)
+
+            var app = Elm.Main.init({
+                node: document.getElementById('elm'),
+                flags: pixels
+            })
+
+            app.ports.toJs.subscribe(function (msg) {
+                console.log('[elm-to-js]', msg)
+                display(msg)
+            })
+
+            const picker = document.getElementById('picker')
+            picker.addEventListener('change', () => {
+                const img = document.getElementById('moon')
+                if (picker.files[0]) {
+                    img.file = picker.files[0]
+                    const reader = new FileReader();
+                    reader.onload = (aImg => e => {
+                        aImg.src = e.target.result;
+                        app.ports.toElm.send(getImageData())
+                    })(img);
+                    reader.readAsDataURL(img.file);
+                }
+            })
+        }
+
+        function getImageData() {
+            const ctx = document.getElementById('canvas').getContext('2d')
+            const img = document.getElementById('moon')
+            console.log(img)
+            console.log(img.width)
+            console.log(img.height)
+            ctx.drawImage(img, 0, 0)
+            const typedArray = ctx.getImageData(0, 0, 400, 300).data
+            return {
+                width : 400,
+                height : 300,
+                data : Array.from(typedArray)
+            }
+        }
+
+        function display(image) {
+            const ctx = document.getElementById('canvas').getContext('2d')
+            const imageData = ctx.createImageData(image.width, image.height)
+
+            for (let y = 0; y < image.height; y++) {
+                for (let x = 0; x < image.width; x++) {
+                    const index = (x + y * image.width) * 4
+                    imageData.data[index + 0] = image.data[index + 0]
+                    imageData.data[index + 1] = image.data[index + 1]
+                    imageData.data[index + 2] = image.data[index + 2]
+                    imageData.data[index + 3] = image.data[index + 3]
+                }
+            }
+
+            console.log(imageData.data)
+
+            ctx.putImageData(imageData, 0, 0)
+        }
+    </script>
+</body>
+</html>
