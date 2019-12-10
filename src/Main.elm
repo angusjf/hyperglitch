@@ -33,7 +33,7 @@ update msg model =
             ({ model | image = jsonToImage newImage }, Cmd.none)
         SendToJS ->
             let
-                newImage = asdfPixelSort (\p -> brightness p > 0.5) model.image
+                newImage = asdfPixelSort (\p -> brightness p > 127) model.image
             in
                 (model, toJs (imageToJson newImage))
 

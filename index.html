@@ -3,12 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <title>Main</title>
+    <style>
+        #moon {
+            width: 400px;
+        }
+    </style>
 </head>
 
 <body>
     <script type="text/javascript" src="main.js"></script>
     <canvas id="canvas" width="400" height="300"></canvas>
-    <img id='moon'src="./sign.jpg" />
+    <img id='moon' src="./sign.jpg" />
     <input id='picker' type='file' accept='image/*'/>
     <div id="elm"></div>
     <script>
@@ -32,12 +37,15 @@
                 const img = document.getElementById('moon')
                 if (picker.files[0]) {
                     img.file = picker.files[0]
-                    const reader = new FileReader();
+                    const reader = new FileReader()
                     reader.onload = (aImg => e => {
-                        aImg.src = e.target.result;
-                        app.ports.toElm.send(getImageData())
-                    })(img);
-                    reader.readAsDataURL(img.file);
+                        aImg.src = e.target.result
+                        setTimeout(
+                            () => app.ports.toElm.send(getImageData()),
+                            10
+                        );
+                    }) (img)
+                    reader.readAsDataURL(img.file)
                 }
             })
         }
@@ -48,7 +56,7 @@
             console.log(img)
             console.log(img.width)
             console.log(img.height)
-            ctx.drawImage(img, 0, 0)
+            ctx.drawImage(img, 0, 0, 400, 300)
             const typedArray = ctx.getImageData(0, 0, 400, 300).data
             return {
                 width : 400,
