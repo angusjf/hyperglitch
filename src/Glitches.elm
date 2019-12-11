@@ -1,10 +1,27 @@
-module Glitches exposing (asdfPixelSort, brightness)
+module Glitches exposing (Filter, filters)
 
 import Debug
 import List
 import List.Extra
 import Maybe
 import Image exposing (Image, Pixel)
+import Random
+import Color
+
+type alias Glitch = ((Image, Random.Seed) -> (Image, Random.Seed))
+
+type alias Filter =
+    { desc   : String
+    , glitch : Glitch
+    }
+
+filters : List Filter
+filters =
+    [ Filter "asdf pixel sort" (asdfPixelSort (\p -> brightness p > 127))
+    , Filter "row shift" shift
+    , Filter "colors" colors
+    , Filter "bleed" bleed
+    ]
 
 {- PART 1 -}
 
@@ -64,12 +81,12 @@ swapApply (f, g) xs = case f xs of
 
 {- PART 3 -}
 
-asdfPixelSort : (Pixel -> Bool) -> Image -> Image
-asdfPixelSort break img =
+asdfPixelSort : (Pixel -> Bool) -> (Image, Random.Seed) -> (Image, Random.Seed)
+asdfPixelSort break (img, seed) =
     let
         rowFns = List.repeat img.height (asdfRowSort break)
     in
-        applyRowFnsToImage rowFns img
+        (applyRowFnsToImage rowFns img, seed)
 
 asdfRowSort : (Pixel -> Bool) -> List Pixel -> List Pixel
 asdfRowSort break = let sortFn a b = compare (brightness a) (brightness b) in
@@ -102,3 +119,54 @@ toTestImage img =
         myFn xs = List.Extra.cycle (List.length xs) [red, black]
     in
         {img | data = List.map myFn img.data }
+
+shift : (Image, Random.Seed) -> (Image, Random.Seed)
+shift (img, s) =
+    let
+        (randomDegrees, s1) = Random.step (Random.list 999 (Random.int -360 360)) s
+        (draggedRowFns, s2) = randomRepeatElems (Random.int 1 10) s1 rowFns
+        rowFns = List.map rotate randomDegrees
+    in
+        (applyRowFnsToImage draggedRowFns img, s2)
+
+randomRepeatElems : (Random.Generator Int) -> Random.Seed
+    -> List a -> (List a, Random.Seed)
+randomRepeatElems gen s xs =
+    case xs of
+        []    -> ([], s)
+        x::rest ->
+            let
+                (rand, s1) = Random.step gen s
+                (repeatedRest, s2) = randomRepeatElems gen s1 rest
+            in
+                (List.repeat rand x ++ repeatedRest, s2)
+
+rotate : Int -> List a -> List a
+rotate n xs = (List.drop n xs) ++ (List.reverse (List.take n xs))
+
+bleed : (Image, Random.Seed) -> (Image, Random.Seed)
+bleed (img, s) =
+    let
+        (rands2d, s1) = Random.step (Random.list 99 (Random.list 99 (Random.int 5 15))) s
+    in
+        (applyRowFnsToImage (List.map repeatElemsSafe rands2d) img, s1)
+
+repeatElemsSafe : List Int -> List a -> List a
+repeatElemsSafe numbers elems =
+    case (numbers, elems) of
+        (n::ns, x::_)  ->
+            let
+                repeats = List.take (List.length elems) <| List.repeat n x
+                rest    = List.drop n elems
+            in
+                repeats ++ repeatElemsSafe ns rest
+        _ -> elems
+
+colors : (Image, Random.Seed) -> (Image, Random.Seed)
+colors (img, s) =
+    let
+        (randomColors, s1) = Random.step (Random.list 999 (Color.gen)) s
+        (draggedRowFns, s2) = randomRepeatElems (Random.int 1 10) s1 rowFns
+        rowFns = List.repeat 100 identity --List.map (List.map (Color.keep)) randomColors
+    in
+        (applyRowFnsToImage rowFns img, s2)
