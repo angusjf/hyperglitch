@@ -15,13 +15,19 @@ type alias Filter =
     , glitch : Glitch
     }
 
-filters : List Filter
+filters : List (String, List Filter)
 filters =
-    [ Filter "asdf pixel sort" (asdfPixelSort (\p -> brightness p > 127))
-    , Filter "row shift" shift
-    , Filter "colors" colors
-    , Filter "bleed" bleed
-    ]
+    let
+        horizontals =
+            [ Filter "asdf pixel sort" (asdfPixelSort (\p -> brightness p > 127))
+            , Filter "row shift" shift
+            , Filter "colors" colors
+            , Filter "bleed" bleed
+            ]
+        verticals = List.map (\f -> {f | desc = "v" ++ f.desc, glitch = verticalize f.glitch}) horizontals
+    in
+        [ ("horizontal functions", horizontals)
+        , ("vertical functions", verticals) ]
 
 {- PART 1 -}
 
@@ -123,7 +129,7 @@ toTestImage img =
 shift : (Image, Random.Seed) -> (Image, Random.Seed)
 shift (img, s) =
     let
-        (randomDegrees, s1) = Random.step (Random.list 999 (Random.int -360 360)) s
+        (randomDegrees, s1) = Random.step (Random.list img.height (Random.int -360 360)) s
         (draggedRowFns, s2) = randomRepeatElems (Random.int 1 10) s1 rowFns
         rowFns = List.map rotate randomDegrees
     in
@@ -147,7 +153,7 @@ rotate n xs = (List.drop n xs) ++ (List.reverse (List.take n xs))
 bleed : (Image, Random.Seed) -> (Image, Random.Seed)
 bleed (img, s) =
     let
-        (rands2d, s1) = Random.step (Random.list 99 (Random.list 99 (Random.int 5 15))) s
+        (rands2d, s1) = Random.step (Random.list img.height (Random.list img.width (Random.int 5 15))) s
     in
         (applyRowFnsToImage (List.map repeatElemsSafe rands2d) img, s1)
 
@@ -162,11 +168,24 @@ repeatElemsSafe numbers elems =
                 repeats ++ repeatElemsSafe ns rest
         _ -> elems
 
-colors : (Image, Random.Seed) -> (Image, Random.Seed)
+transpose : Image -> Image
+transpose img =
+    { img | width = img.height
+    , height = img.width
+    , data = List.Extra.transpose img.data }
+
+colors : Glitch
 colors (img, s) =
     let
         (randomColors, s1) = Random.step (Random.list 999 (Color.gen)) s
-        (draggedRowFns, s2) = randomRepeatElems (Random.int 1 10) s1 rowFns
-        rowFns = List.repeat 100 identity --List.map (List.map (Color.keep)) randomColors
+        rowFns = List.repeat 999 (\row -> List.map2 Color.keep randomColors row)
     in
-        (applyRowFnsToImage rowFns img, s2)
+        (applyRowFnsToImage rowFns img, s1)
+
+verticalize : ((Image, Random.Seed) -> (Image, Random.Seed)) -> ((Image, Random.Seed) -> (Image, Random.Seed))
+verticalize glitch =
+    \(img, seed) ->
+        let
+            (output, seed1) = glitch (transpose img, seed)
+        in
+            (transpose output, seed1)

@@ -45,7 +45,7 @@ update msg model =
             in
                 (model, toJs (imageToJson newImage))
         AddFilter filter ->
-            ({ model | filters = filter::model.filters }, Cmd.Extra.perform SendToJs)
+            ({ model | filters = model.filters ++ [filter] }, Cmd.Extra.perform SendToJs)
         RemoveFilter n ->
             ({ model | filters = List.Extra.removeAt n model.filters }, Cmd.Extra.perform SendToJs)
 
@@ -61,9 +61,14 @@ view : Model -> Html Msg
 view model =
     div []
         [ li [] <| List.indexedMap viewFilter model.filters
-        , div [] <| List.map viewAddFilterButton Glitches.filters
+        , div [] <| List.map viewFilters Glitches.filters
         --button [ onClick SendToJs ] [ text "glitch!" ]
         ]
+
+viewFilters : (String, List Filter) -> Html Msg
+viewFilters (groupName, fs) = div []
+            [ text groupName
+            , div []  <| List.map viewAddFilterButton fs ]
 
 viewFilter : Int -> Filter -> Html Msg
 viewFilter n filter =
@@ -75,7 +80,7 @@ viewFilter n filter =
 viewAddFilterButton : Filter -> Html Msg
 viewAddFilterButton filter =
     let
-        buttonText = "Add '" ++ filter.desc ++ "'!'"
+        buttonText = "Add '" ++ filter.desc ++ "'!"
     in
         button [ onClick (AddFilter filter) ] [ text buttonText ]
 
