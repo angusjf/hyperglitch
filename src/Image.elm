@@ -1,9 +1,11 @@
-module Image exposing (Image, Pixel, imageToJson, jsonToImage)
+module Image exposing (Image, Pixel, imageToJson, jsonToImage, map, add)
 
 import Json.Encode as E
 import Json.Decode as D
 import List.Split
 import Debug
+import List
+import Maybe
 
 type alias Image =
     { width  : Int
@@ -62,3 +64,27 @@ jsonToImage : E.Value -> Image
 jsonToImage json = case D.decodeValue imageDecoder json of
     (Ok image)  -> image
     (Err error) -> Debug.todo <| D.errorToString error
+
+map : (Pixel -> Pixel) -> Image -> Image
+map fn img = { img | data = List.map (List.map fn) img.data }
+
+map2 : (Pixel -> Pixel -> Pixel) -> Image -> Image -> Image
+map2 fn img1 img2 =
+    let
+        go f list1 list2 =
+            case (list1, list2) of
+                (x::xs, y::ys) -> List.map2 f x y :: go f xs ys
+                (_, _) -> []
+    in
+        { img1 | data = go fn img1.data img2.data }
+
+add : Image -> Image -> Image
+add image1 image2 = map2 addPixel image1 image2
+
+addPixel : Pixel -> Pixel -> Pixel
+addPixel p1 p2 =
+    { red = p1.red + p2.red
+    , green = p1.green + p2.green
+    , blue = p1.blue + p2.blue
+    , alpha = p1.alpha + p2.alpha
+    }

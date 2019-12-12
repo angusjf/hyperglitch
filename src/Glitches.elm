@@ -25,11 +25,49 @@ filters =
             , Filter "bleed" bleed
             ]
         verticals = List.map (\f -> {f | desc = "v" ++ f.desc, glitch = verticalize f.glitch}) horizontals
+        rgbs = List.map (\f -> {f | desc = "rgb" ++ f.desc, glitch = rgbize f.glitch}) horizontals
     in
         [ ("horizontal functions", horizontals)
-        , ("vertical functions", verticals) ]
+        , ("vertical functions", verticals)
+        , ("rgb functions", rgbs) ]
 
 {- PART 1 -}
+
+rgb : Image -> (Image, Image, Image)
+rgb img =
+    let
+        red   = Image.map (Color.keep Color.Red)   img
+        green = Image.map (Color.keep Color.Green) img
+        blue  = Image.map (Color.keep Color.Blue)  img
+    in
+        (red, green, blue)
+
+applyRgb : (Glitch, Glitch, Glitch) -> Glitch
+applyRgb (f1, f2, f3) =
+    \(img, s) ->
+        let
+            (red, green, blue) = rgb img
+            (r, s1) = f1 (red, s)
+            (g, s2) = f2 (green, s1)
+            (b, s3) = f3 (blue, s2)
+        in
+            (Image.add (Image.add r g) b, s3)
+
+map : (Image -> Image) -> Glitch -> Glitch
+map fn glitch = \(img, s) -> (fn img, s)
+
+rgbize : Glitch -> Glitch
+rgbize glitch = applyRgb (glitch, glitch, glitch)
+
+add : Glitch -> Glitch -> Glitch
+add g1 g2 =
+    \(img, seed) ->
+        let
+            (out1, s1) = g1 (img, seed)
+            (out2, s2) = g2 (out1, s1)
+            out = Image.add out1 out2
+        in
+            (out, s2)
 
 brightness : Pixel -> Float
 brightness pixel =
