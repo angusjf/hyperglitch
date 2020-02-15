@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>Main</title>
     <style>
-        #moon {
+        #hidden-image {
             display: none;
         }
     </style>
@@ -12,23 +12,16 @@
 
 <body>
     <script type="text/javascript" src="main.js"></script>
-    <canvas id="canvas" width="400" height="300"></canvas>
-    <div>
-        <img id='moon' src="./sign.jpg" />
-    </div>
-    <div>
-        <input id='picker' type='file' accept='image/*'/>
-    </div>
     <div id="elm"></div>
     <script>
         window.onload = function () {
-            const pixels = getImageData()
+            //const pixels = getImageData()
 
-            console.log("[js] " + pixels.data)
+            //console.log("[js] " + pixels.data)
 
             var app = Elm.Main.init({
                 node: document.getElementById('elm'),
-                flags: pixels
+                flags: null //pixels
             })
 
             app.ports.toJs.subscribe(function (msg) {
@@ -36,8 +29,24 @@
                 display(msg)
             })
 
+            app.ports.base64ToJs.subscribe(function (msg) {
+            setTimeout(
+                    () => {
+                console.log('[base64-to-js]', msg)
+                console.log('[1/4]')
+                let data = getImageData()
+                console.log('[2/4]')
+                console.log(data)
+                console.log('[3/4]')
+                app.ports.toElm.send(data)
+                console.log('[4/4]')
+                    }, 10
+                )
+            })
+            /*
             const picker = document.getElementById('picker')
             picker.addEventListener('change', () => {
+                console.log('[picker-ch]', msg)
                 const img = document.getElementById('moon')
                 if (picker.files[0]) {
                     img.file = picker.files[0]
@@ -52,30 +61,34 @@
                     reader.readAsDataURL(img.file)
                 }
             })
+            */
         }
 
         function getImageData() {
-            const canvas = document.getElementById('canvas')
-            const ctx = canvas.getContext('2d')
-            const img = document.getElementById('moon')
-            const maxPixels = 200E+3;
-            while (img.width * img.height > maxPixels) {
-                img.width /= 2
-                img.height /= 2
-            }
-            canvas.width = img.width
-            canvas.height = img.height
-            ctx.drawImage(img, 0, 0, img.width, img.height)
-            const typedArray = ctx.getImageData(0, 0, img.width, img.height).data
-            return {
-                width : img.width,
-                height : img.height,
-                data : Array.from(typedArray)
-            }
+                        const canvas = document.getElementById('hidden-canvas')
+                        const ctx = canvas.getContext('2d')
+                        const img = document.getElementById('uploadedImage').children[0]
+                        console.log(img)
+                        const maxPixels = 400E+3;
+                        while (img.width * img.height > maxPixels) {
+                            img.width /= 2
+                            img.height /= 2
+                        }
+                        canvas.width = img.width
+                        canvas.height = img.height
+                        ctx.drawImage(img, 0, 0, img.width, img.height)
+                        console.log("height: " + img.width + "  " + "height: " + img.height)
+                        const typedArray = ctx.getImageData(0, 0, img.width, img.height).data
+                        console.log("gotImageData!")
+                        return {
+                            width : img.width,
+                            height : img.height,
+                            data : Array.from(typedArray)
+                        }
         }
 
         function display(image) {
-            const ctx = document.getElementById('canvas').getContext('2d')
+            const ctx = document.getElementById('hidden-canvas').getContext('2d')
             const imageData = ctx.createImageData(image.width, image.height)
 
             for (let y = 0; y < image.height; y++) {

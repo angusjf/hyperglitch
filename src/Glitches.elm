@@ -1,35 +1,14 @@
-module Glitches exposing (Filter, filters)
+module Glitches exposing (..)
 
 import Debug
 import List
 import List.Extra
 import Maybe
-import Image exposing (Image, Pixel)
+import Image exposing (Image, Pixel, brightness, luminosity, saturation)
 import Random
 import Color
 
 type alias Glitch = ((Image, Random.Seed) -> (Image, Random.Seed))
-
-type alias Filter =
-    { desc   : String
-    , glitch : Glitch
-    }
-
-filters : List (String, List Filter)
-filters =
-    let
-        horizontals =
-            [ Filter "asdf pixel sort" (asdfPixelSort (\p -> brightness p > 127))
-            , Filter "row shift" shift
-            , Filter "colors" colors
-            , Filter "bleed" bleed
-            ]
-        verticals = List.map (\f -> {f | desc = "v" ++ f.desc, glitch = verticalize f.glitch}) horizontals
-        rgbs = List.map (\f -> {f | desc = "rgb" ++ f.desc, glitch = rgbize f.glitch}) horizontals
-    in
-        [ ("horizontal functions", horizontals)
-        , ("vertical functions", verticals)
-        , ("rgb functions", rgbs) ]
 
 {- PART 1 -}
 
@@ -68,40 +47,6 @@ add g1 g2 =
             out = Image.add out1 out2
         in
             (out, s2)
-
-brightness : Pixel -> Float
-brightness pixel =
-    let
-        (r, g, b) = ( toFloat pixel.red
-                    , toFloat pixel.green
-                    , toFloat pixel.blue )
-    in
-        (r + g + b) / 3
-
-luminosity : Pixel -> Float
-luminosity pixel =
-    let
-        (r, g, b) = ( toFloat pixel.red
-                    , toFloat pixel.green
-                    , toFloat pixel.blue )
-        max = Maybe.withDefault 255 (List.maximum [r, g, b])
-        min = Maybe.withDefault 0 (List.minimum [r, g, b])
-    in
-        (max + min) / 2
-
-saturation : Pixel -> Float
-saturation pixel =
-    let
-        (r, g, b) = ( toFloat pixel.red
-                    , toFloat pixel.green
-                    , toFloat pixel.blue )
-        l = luminosity pixel
-        max = Maybe.withDefault 1 (List.maximum [r, g, b])
-        min = Maybe.withDefault 0 (List.minimum [r, g, b])
-    in
-        if l < 1
-            then (max - min) / (1 - abs (2 * l - 1))
-            else 0
 
 {- PART 2 -}
 
@@ -164,10 +109,10 @@ toTestImage img =
     in
         {img | data = List.map myFn img.data }
 
-shift : (Image, Random.Seed) -> (Image, Random.Seed)
-shift (img, s) =
+shift : Int -> (Image, Random.Seed) -> (Image, Random.Seed)
+shift amount (img, s) =
     let
-        (randomDegrees, s1) = Random.step (Random.list img.height (Random.int -360 360)) s
+        (randomDegrees, s1) = Random.step (Random.list img.height (Random.int -amount amount)) s
         (draggedRowFns, s2) = randomRepeatElems (Random.int 1 10) s1 rowFns
         rowFns = List.map rotate randomDegrees
     in

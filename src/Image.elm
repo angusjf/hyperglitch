@@ -1,4 +1,4 @@
-module Image exposing (Image, Pixel, imageToJson, jsonToImage, map, add)
+module Image exposing (Image, Pixel, imageToJson, jsonToImage, map, add, brightness, luminosity, saturation)
 
 import Json.Encode as E
 import Json.Decode as D
@@ -60,10 +60,8 @@ flattenRow pixels = case pixels of
     p::ps -> p.red::p.green::p.blue::p.alpha::flattenRow ps
     _     -> []
 
-jsonToImage : E.Value -> Image
-jsonToImage json = case D.decodeValue imageDecoder json of
-    (Ok image)  -> image
-    (Err error) -> Debug.todo <| D.errorToString error
+jsonToImage : E.Value -> Result D.Error Image
+jsonToImage json = D.decodeValue imageDecoder json
 
 map : (Pixel -> Pixel) -> Image -> Image
 map fn img = { img | data = List.map (List.map fn) img.data }
@@ -88,3 +86,37 @@ addPixel p1 p2 =
     , blue = p1.blue + p2.blue
     , alpha = p1.alpha + p2.alpha
     }
+
+brightness : Pixel -> Float
+brightness pixel =
+    let
+        (r, g, b) = ( toFloat pixel.red
+                    , toFloat pixel.green
+                    , toFloat pixel.blue )
+    in
+        (r + g + b) / 3
+
+luminosity : Pixel -> Float
+luminosity pixel =
+    let
+        (r, g, b) = ( toFloat pixel.red
+                    , toFloat pixel.green
+                    , toFloat pixel.blue )
+        max = Maybe.withDefault 255 (List.maximum [r, g, b])
+        min = Maybe.withDefault 0 (List.minimum [r, g, b])
+    in
+        (max + min) / 2
+
+saturation : Pixel -> Float
+saturation pixel =
+    let
+        (r, g, b) = ( toFloat pixel.red
+                    , toFloat pixel.green
+                    , toFloat pixel.blue )
+        l = luminosity pixel
+        max = Maybe.withDefault 1 (List.maximum [r, g, b])
+        min = Maybe.withDefault 0 (List.minimum [r, g, b])
+    in
+        if l < 1
+            then (max - min) / (1 - abs (2 * l - 1))
+            else 0
